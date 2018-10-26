@@ -3,14 +3,13 @@
 import collections
 import sys
 
+
 import rospy
 import numpy as np
 from geometry_msgs.msg import PoseArray, PoseStamped
 from ackermann_msgs.msg import AckermannDriveStamped
 
 import utils
-
-# anna's test
 
 # The topic to publish control commands to
 PUB_TOPIC = '/vesc/high_level/ackermann_cmd_mux/input/nav_0' 
@@ -66,13 +65,27 @@ class LineFollower:
     pass
 
   '''
+  Check to see if the given step in the plan is in front of the current pose.
+  If in front return True, if behind return False.
+  '''
+  def is_config_in_front(current_x, current_y, current_theta, plan_x, plan_y, plan_theta):
+    if plan_x < current_x and plan_y < current_y:
+	return False
+    else:
+	return True
+
+
+  '''
   Computes the error based on the current pose of the car
     cur_pose: The current pose of the car, represented as a numpy array [x,y,theta]
   Returns: (False, 0.0) if the end of the plan has been reached. Otherwise, returns
            (True, E) - where E is the computed error
   '''
   def compute_error(self, cur_pose):
-    
+    current_x, current_y, current_theta = cur_pose[0], cur_pose[1], cur_pose[2]
+
+    #print current_x, current_y, current_theta
+
     # Find the first element of the plan that is in front of the robot, and remove
     # any elements that are behind the robot. To do this:
     # Loop over the plan (starting at the beginning) For each configuration in the plan
@@ -80,32 +93,74 @@ class LineFollower:
         #   Will want to perform a coordinate transformation to determine if 
         #   the configuration is in front or behind the robot
         # If the configuration is in front of the robot, break out of the loop
-    while len(self.plan) > 0:
-      # YOUR CODE HERE
-      pass        
-      
-    # Check if the plan is empty. If so, return (False, 0.0)
-    # YOUR CODE HERE
+
+    if len(self.plan) > 0:
+      ds = []
+      for each in self.plan:
+
+        x_diff = float(current_x - each[0]) #(current_x - self.plan[0])
+        y_diff = float(current_y - each[1])
+        #print x_diff, y_diff
+        d_2 = ((x_diff)**2.0) + ((y_diff)**2.0)
+        d = (d_2)**(0.5)
+        ds.append(d)
+
+        #plan_x, plan_y, plan_theta = self.plan[0], self.plan[1], self.plan[2]
+
+      nearest_plan_pose = (ds.index(min(ds)))
+      print nearest_plan_pose
+
+      #if nearest_plan_pose == len(self.plan):
+      #   return (False,0.0)
+         
+   # print min(ds)
+      #delete past pose of plan
+     # del self.plan[0:nearest_plan_pose+1]
+      '''
+      if nearest_plan_pose > 0:
+        try:
+	  del self.plan[nearest_plan_pose-1]
+        except:
+          pass
+      '''
+      #print self.plan
+      #print "length = " 
+      #print len(self.plan)
+
+
+      #print ds
+
     
-    # At this point, we have removed configurations from the plan that are behind
-    # the robot. Therefore, element 0 is the first configuration in the plan that is in 
-    # front of the robot. To allow the robot to have some amount of 'look ahead',
-    # we choose to have the robot head towards the configuration at index 0 + self.plan_lookahead
-    # We call this index the goal_index
-    goal_idx = min(0+self.plan_lookahead, len(self.plan)-1)
+      # At this point, we have removed configurations from the plan that are behind
+      # the robot. Therefore, element 0 is the first configuration in the plan that is in 
+      # front of the robot. To allow the robot to have some amount of 'look ahead',
+      # we choose to have the robot head towards the configuration at index 0 + self.plan_lookahead
+      # We call this index the goal_index
+      goal_idx = min(0+self.plan_lookahead, len(self.plan)-1)
+
+      goal_x, goal_y, goal_theta = self.plan[goal_idx]
    
     # Compute the translation error between the robot and the configuration at goal_idx in the plan
     # YOUR CODE HERE
+    # CHANGE THIS fix this
+      translation_error = ((((goal_x-current_x)**2)+(goal_y - current_y)**2)**0.5)
+      rotation_error = goal_theta - current_theta
     
+
     # Compute the total error
     # Translation error was computed above
     # Rotation error is the difference in yaw between the robot and goal configuration
     #   Be carefult about the sign of the rotation error
     # YOUR CODE HERE
-    error = # self.translation_weight * translation_error + self.rotation_weight * rotation_error
+      self.translation_weight = 0.01 #try, delete
+      error =  self.translation_weight * translation_error + self.rotation_weight * rotation_error
 
-    return True, error
-    
+      return True, error
+
+    # Check if the plan is empty. If so, return (False, 0.0)
+    if len(self.plan) == 0:
+      return (False, 0.0) 
+   
     
   '''
   Uses a PID control policy to generate a steering angle from the passed error
@@ -118,7 +173,15 @@ class LineFollower:
     # Compute the derivative error using the passed error, the current time,
     # the most recent error stored in self.error_buff, and the most recent time
     # stored in self.error_buff
-    # YOUR CODE HERE
+    # fix this change this
+    deriv_error = 0.0
+    if len(self.error_buff) > 0 :
+      recent_time = self.error_buff[-1][0]
+      recent_error = self.error_buff[-1][1]
+      error_diff = error - recent_error
+      time_diff = now - recent_time
+      deriv_error = error_diff / time_diff
+      #print deriv_error
     
     # Add the current error to the buffer
     self.error_buff.append((error, now))
@@ -126,10 +189,12 @@ class LineFollower:
     # Compute the integral error by applying rectangular integration to the elements
     # of self.error_buff: https://chemicalstatistician.wordpress.com/2014/01/20/rectangular-integration-a-k-a-the-midpoint-rule/
     # YOUR CODE HERE
-    
+    # fix this change this
+    integ_error = 0.0
+
     # Compute the steering angle as the sum of the pid errors
     # YOUR CODE HERE
-    return #self.kp*error + self.ki*integ_error + self.kd * deriv_error
+    return self.kp*error + self.ki*integ_error + self.kd * deriv_error
     
   '''
   Callback for the current pose of the car
@@ -171,29 +236,33 @@ def main():
   # 'Starting' values are ones you should consider tuning for your system
   
   plan_topic = rospy.get_param("~plan_topic", '/planner_node/car_plan') # Default val: '/planner_node/car_plan'
+ # pose_arr = rospy.Subscriber(plan_topic,PoseArray)
   pose_topic = rospy.get_param("~pose_topic", '/sim_car_pose/pose') # Default val: '/sim_car_pose/pose'
-  plan_lookahead = rospy.get_param("~plan_lookahead", None)# Starting val: 5
-  translation_weight = rospy.get_param("~translation_weight", None) # Starting val: 1.0
-  rotation_weight = rospy.get_param("~rotation_weight", None)# Starting val: 0.0
-  kp = rospy.get_param("~kp", None)# Startinig val: 1.0
-  ki = rospy.get_param("~ki", None)# Starting val: 0.0
-  kd = rospy.get_param("~kd", None)# Starting val: 0.0
-  error_buff_length = rospy.get_param("~error_buff_length", None)# Starting val: 10
-  speed = rospy.get_param("~speed", None) # Default val: 1.0
+  plan_lookahead = rospy.get_param("~plan_lookahead", 5)# Starting val: 5
+  translation_weight = rospy.get_param("~translation_weight", 1.0) # Starting val: 1.0
+  rotation_weight = rospy.get_param("~rotation_weight", 0.0)# Starting val: 0.0
+  kp = rospy.get_param("~kp", 1.0)# Startinig val: 1.0
+  ki = rospy.get_param("~ki", 0.0)# Starting val: 0.0
+  kd = rospy.get_param("~kd", 0.0)# Starting val: 0.0
+  error_buff_length = rospy.get_param("~error_buff_length", 10)# Starting val: 10
+  speed = rospy.get_param("~speed", 1.0) # Default val: 1.0
 
   raw_input("Press Enter to when plan available...")  # Waits for ENTER key press
   
-  # Use rospy.wait_for_message to get the plan msg
-  plan_msg = rospy.wait_for_message()
   
+  # Use rospy.wait_for_message to get the plan msg
+  plan_msg = rospy.wait_for_message('/planner_node/car_plan', PoseArray)
+
+#  print plan_msg
+
   # Convert the plan msg to a list of 3-element numpy arrays
   #     Each array is of the form [x,y,theta]
-  plan = array[]
-  for msg in plan_msg:
-    plan_x = msg.pose.position.x
-    plan_y = msg.pose.position.y
-    plan_theta = utils.quaternion_to_angle(msg.pose.orientation)
-    plan.append[(plan_x, plan_y, plan_theta)]
+  plan = []
+  for msg in plan_msg.poses:
+    plan_x = msg.position.x
+    plan_y = msg.position.y
+    plan_theta = utils.quaternion_to_angle(msg.orientation)
+    plan.append([plan_x, plan_y, plan_theta])
 
   # Create a LineFollower object
   lf = LineFollower(plan, pose_topic, plan_lookahead, translation_weight, rotation_weight, kp, ki, kd, error_buff_length, speed) 
