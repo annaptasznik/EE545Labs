@@ -83,7 +83,6 @@ class LineFollower:
 
         x_diff = float(current_x - each[0]) 
         y_diff = float(current_y - each[1])
-        #print x_diff, y_diff
         d_2 = ((x_diff)**2.0) + ((y_diff)**2.0)
         d = (d_2)**(0.5)
         ds.append(d)
@@ -91,15 +90,17 @@ class LineFollower:
 
       nearest_plan_pose = (ds.index(min(ds)))
     
+      # check if the last plan pose is reached
+      if nearest_plan_pose == len(self.plan)-1:
+        return (False, 0.0) 
+   
       # At this point, we have removed configurations from the plan that are behind
       # the robot. Therefore, element 0 is the first configuration in the plan that is in 
       # front of the robot. To allow the robot to have some amount of 'look ahead',
       # we choose to have the robot head towards the configuration at index 0 + self.plan_lookahead
       # We call this index the goal_index
-      self.plan_lookahead = 2
       start_index = nearest_plan_pose # set to zero if array is altered
       goal_idx = min(start_index+self.plan_lookahead, len(self.plan)-1)
-      #print goal_idx
       goal_x, goal_y, goal_theta = self.plan[goal_idx]
    
     # Compute the translation error between the robot and the configuration at goal_idx in the plan
@@ -122,10 +123,7 @@ class LineFollower:
 
       return True, error
 
-    # Check if the plan is empty. If so, return (False, 0.0)
-    if len(self.plan) == 0:
-      return (False, 0.0) 
-   
+
     
   '''
   Uses a PID control policy to generate a steering angle from the passed error
