@@ -50,21 +50,20 @@ class LaserWanderer:
         # NOTE THAT THIS VIZUALIZATION WILL ONLY WORK IN SIMULATION.
         self.cmd_pub = rospy.Publisher(CMD_TOPIC, AckermannDriveStamped, queue_size=1)          # Create a publisher for sending controls
         self.laser_sub = rospy.Subscriber(SCAN_TOPIC, LaserScan, self.wander_cb, queue_size=1)  # Create a subscriber to laser scans that uses the self.wander_cb callback
-        self.viz_pub = rospy.Publisher(VIZ_TOPIC, PoseArray, queue_size=1)                      # Create a publisher for vizualizing trajectories. Will publish PoseArrays
-        self.viz_sub = rospy.Subscriber(POSE_TOPIC, PoseStamped, , queue_size=1)                # Create a subscriber to the current position of the car
+        self.viz_pub = rospy.Publisher(VIZ_TOPIC, PoseArray, queue_size=1)                      # Create a publisher for vizualizing trajectories. Will publish PoseArrays  
+        self.viz_sub = rospy.Subscriber(POSE_TOPIC, PoseStamped, self.viz_sub_cb, queue_size=1)      # Create a subscriber to the current position of the car
     
     '''
     Vizualize the rollouts. Transforms the rollouts to be in the frame of the world.
     Only display the last pose of each rollout to prevent lagginess
     msg: A PoseStamped representing the current pose of the car
     '''
-    def viz_sub(self, msg):
+    def viz_sub_cb(self, msg):
         # Create the PoseArray to publish. Will contain N poses, where the n-th pose
         # represents the last pose in the n-th trajectory
         pa = PoseArray()
         pa.header.frame_id = '/map'
         pa.header.stamp = rospy.Time.now()
-
 
         # Transform the last pose of each trajectory to be w.r.t the world and insert into
         # the pose array
@@ -104,13 +103,13 @@ class LaserWanderer:
     msg: A LaserScan
     '''
     def wander_cb(self, msg):
-        start = rospy.Time.now().to_sec() # Get the time at which this function started
+        start = rospy.Time.now().to_sec()   # Get the time at which this function started
 
         # A N dimensional matrix that should be populated with the costs of each
         # trajectory up to time t <= T
         delta_costs = np.zeros(self.deltas.shape[0], dtype=np.float) 
         traj_depth = 0
-
+        
         # Evaluate the cost of each trajectory. Each iteration of the loop should calculate
         # the cost of each trajectory at time t = traj_depth and add those costs to delta_costs
         # as appropriate
@@ -121,11 +120,11 @@ class LaserWanderer:
         #       delta_costs[n] += cost of the t=traj_depth step of trajectory n
         #   traj_depth += 1 
         # YOUR CODE HERE
-
+        while (rospy.Time.now().to_sec() < start + compute_time):
+            pass
 
         # Find the delta that has the smallest cost and execute it by publishing
         # YOUR CODE HERE
-
 '''
 Apply the kinematic model to the passed pose and control
   pose: The current state of the robot [x, y, theta]
@@ -137,9 +136,15 @@ def kinematic_model_step(pose, control, car_length):
     # Apply the kinematic model
     # Make sure your resulting theta is between 0 and 2*pi
     # Consider the case where delta == 0.0
+    result_pose = np.array([0.0,0.0,0.0], dtype=np.float)
 
-    # YOUR CODE HERE
-    pass
+    beta = np.arctan(0.5*np.tan(control[1])
+
+    result_pose[2] = pose[2]+(control[0]/car_length)*dt*np.sin(2*beta)                              # calculate new theta
+    result_pose[0] = pose[0]+(car_length/(np.sin(2*beta))*(np.sin(result_pose[2]-np.sin(pose[2])    # calculate new x
+    result_pose[1] = pose[1]+(car_length/(np.sin(2*beta))*(-np.cos(result_pose[2]+np.cose(pose[2])  # calculate new y
+
+    return result_pose
     
 '''
 Repeatedly apply the kinematic model to produce a trajectory for the car
@@ -148,9 +153,18 @@ Repeatedly apply the kinematic model to produce a trajectory for the car
   car_length: The length of the car
 Returns a Tx3 matrix where the t-th row corresponds to the robot's pose at time t+1
 '''
-def generate_rollout(init_pose, controls, car_length):
-    # YOUR CODE HERE
-    pass
+def generate_rollout(init_pose, controls, car_length, T):
+    # create an empty array for the trajectories
+    trajectory_array = controls = np.zeros((T,3), dtype=np.float)
+    current_pose = np.array([0.0,0.0,0.0], dtype=np.float)
+    
+    # Loop that runs for all the elements in the control array, calls the kinematic_model_step
+    # and adds the resulting pose to the trajectory_array
+    for i in xrange(controls.shape[0]):
+        trajectory_array[i,:] = kinematic_model_step(current_pose, controls[i,:], car_length)
+        current_pose = trajectory_array[i,:]
+    
+    return trajectory_array
    
 '''
 Helper function to generate a number of kinematic car rollouts
@@ -173,12 +187,13 @@ def generate_mpc_rollouts(speed, min_delta, max_delta, delta_incr, dt, T, car_le
     init_pose = np.array([0.0,0.0,0.0], dtype=np.float)
 
     rollouts = np.zeros((N,T,3), dtype=np.float)
+    
     for i in xrange(N):
         controls = np.zeros((T,3), dtype=np.float)
         controls[:,0] = speed
         controls[:,1] = deltas[i]
         controls[:,2] = dt
-        rollouts[i,:,:] = generate_rollout(init_pose, controls, car_length)
+        rollouts[i,:,:] = generate_rollout(init_pose, controls, car_length, T)
     
     return rollouts, deltas
 
@@ -193,21 +208,21 @@ def main():
     # 'Default' values are ones that probably don't need to be changed (but you could for fun)
     # 'Starting' values are ones you should consider tuning for your system  
     # YOUR CODE HERE
-    speed = # Default val: 1.0
-    min_delta = # Default val: -0.34
-    max_delta = # Default val: 0.341
-    delta_incr = # Starting val: 0.34/3 (consider changing the denominator) 
-    dt = # Default val: 0.01
-    T = # Starting val: 300
-    compute_time = # Default val: 0.09
-    laser_offset = # Starting val: 1.0
+
+    speed = rospy.get_param("~speed", 1.0)			        # Default val: 1.0
+    min_delta = rospy.get_param("~min_delta", -0.34)		# Default val: -0.34
+    max_delta = rospy.get_param("~max_delta", 0.341)		# Default val: 0.341
+    delta_incr = rospy.get_param("~delta_inc", 0.113)		# Starting val: 0.34/3 (consider changing the denominator) 
+    dt = rospy.get_param("~dt", 0.01)				        # Default val: 0.01
+    T = rospy.get_param("~T", 300)				            # Starting val: 300
+    compute_time = rospy.get_param("~compute_time", 0.09)	# Default val: 0.09
+    laser_offset = rospy.get_param("~laser_offset", 1.0)	# Starting val: 1.0
 
     # DO NOT ADD THIS TO YOUR LAUNCH FILE, car_length is already provided by teleop.launch
-    car_length = rospy.get_param("car_kinematics/car_length", 0.33) 
+    car_length = rospy.get_param("car_kinematics/car_length", 0.33)
 
     # Generate the rollouts
-    rollouts, deltas = generate_mpc_rollouts(speed, min_delta, max_delta,
-                                           delta_incr, dt, T, car_length)
+    rollouts, deltas = generate_mpc_rollouts(speed, min_delta, max_delta, delta_incr, dt, T, car_length)
 
     # Create the LaserWanderer                                         
     lw = LaserWanderer(rollouts, deltas, speed, compute_time, laser_offset)
