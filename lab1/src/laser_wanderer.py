@@ -51,7 +51,7 @@ class LaserWanderer:
         self.cmd_pub = rospy.Publisher(CMD_TOPIC, AckermannDriveStamped, queue_size=1)          # Create a publisher for sending controls
         self.laser_sub = rospy.Subscriber(SCAN_TOPIC, LaserScan, self.wander_cb, queue_size=1)  # Create a subscriber to laser scans that uses the self.wander_cb callback
         self.viz_pub = rospy.Publisher(VIZ_TOPIC, PoseArray, queue_size=1)                      # Create a publisher for vizualizing trajectories. Will publish PoseArrays  
-        self.viz_sub = rospy.Subscriber(POSE_TOPIC, PoseStamped, self.viz_sub_cb, queue_size=1)      # Create a subscriber to the current position of the car
+        self.viz_sub = rospy.Subscriber(POSE_TOPIC, PoseStamped, self.viz_sub_cb, queue_size=1) # Create a subscriber to the current position of the car
     
     '''
     Vizualize the rollouts. Transforms the rollouts to be in the frame of the world.
@@ -138,11 +138,11 @@ def kinematic_model_step(pose, control, car_length):
     # Consider the case where delta == 0.0
     result_pose = np.array([0.0,0.0,0.0], dtype=np.float)
 
-    beta = np.arctan(0.5*np.tan(control[1])
+    beta = np.arctan(0.5*np.tan(control[1]))
 
-    result_pose[2] = pose[2]+(control[0]/car_length)*dt*np.sin(2*beta)                              # calculate new theta
-    result_pose[0] = pose[0]+(car_length/(np.sin(2*beta))*(np.sin(result_pose[2]-np.sin(pose[2])    # calculate new x
-    result_pose[1] = pose[1]+(car_length/(np.sin(2*beta))*(-np.cos(result_pose[2]+np.cose(pose[2])  # calculate new y
+    result_pose[2] = pose[2]+(control[0]/car_length)*control[2]*np.sin(2*beta)                      # calculate new theta
+    result_pose[0] = pose[0]+(car_length/(np.sin(2*beta)))*(np.sin(result_pose[2])-np.sin(pose[2])) # calculate new x
+    result_pose[1] = pose[1]+(car_length/(np.sin(2*beta)))*(-np.cos(result_pose[2])+np.cos(pose[2]))# calculate new y
 
     return result_pose
     
