@@ -62,7 +62,7 @@ class LaserWanderer:
         # Create the PoseArray to publish. Will contain N poses, where the n-th pose
         # represents the last pose in the n-th trajectory
         pa = PoseArray()
-        pa.header.frame_id = '/map'
+        pa.header.frame_id = '/small_basement'
         pa.header.stamp = rospy.Time.now()
 
         # Transform the last pose of each trajectory to be w.r.t the world and insert into
@@ -94,21 +94,17 @@ class LaserWanderer:
         #   What if the corresponding laser measurement is NAN?
         # NOTE THAT NO COORDINATE TRANSFORMS ARE NECESSARY INSIDE OF THIS FUNCTION
 
-        # YOUR CODE HERE
+        cost = np.abs(delta)
 
-	#reading the laser message
-	#find the index of the ranges array matches the sterring angle (delta)
-	#find out if rollout_pose (x,y) is closer/farther than laser range
-	#return the init_cost + either 0 or max_penalty(10000)
+        angle = math.atan2(rollout_pose[1], rollout_pose[0])
 
-	cost = np.abs(delta)
-	angle = math.atan2(rollout_pose[1], rollout_pose[0])
-	laser_distance = laser_msg.ranges[(angle-laser_msg.angle_min)/laser_msg.angle_increment]
-	pose_distance = math.pow(rollout_pose[0],2) + math.pow(rollout_pose[1],2)
-	if pose_distance > (laser_distance - np.abs(self.laser_offset)):
-		cost = cost + MAX_PENALTY
-	return cost
+        laser_distance = laser_msg.ranges[int(round((angle-laser_msg.angle_min)/laser_msg.angle_increment))]
+        pose_distance = math.pow(rollout_pose[0],2) + math.pow(rollout_pose[1],2)
 
+        if pose_distance > (laser_distance - np.abs(self.laser_offset)):
+            cost = cost + MAX_PENALTY
+
+        return cost
     
     '''
     Controls the steering angle in response to the received laser scan. Uses approximately
@@ -133,11 +129,25 @@ class LaserWanderer:
         #       delta_costs[n] += cost of the t=traj_depth step of trajectory n
         #   traj_depth += 1 
         # YOUR CODE HERE
-        while (rospy.Time.now().to_sec() < start + compute_time):
-            pass
+
+        while (rospy.Time.now().to_sec() < (start + self.compute_time)):
+            for n in xrange(self.deltas.shape[0]):
+                for traj_depth in xrange(self.rollouts.shape[1]):
+                    delta_costs[n] += self.compute_cost(self.deltas[n],self.rollouts[n,traj_depth,:],msg)
+              
 
         # Find the delta that has the smallest cost and execute it by publishing
-        # YOUR CODE HERE
+        chosen_delta = np.argmin(delta_costs)
+
+        # Setup the control message
+        ads = AckermannDriveStamped()
+        ads.header.frame_id = '/small_basement'
+        ads.header.stamp = rospy.Time.now()
+        ads.drive.steering_angle = self.deltas[chosen_delta]
+        ads.drive.speed = self.speed
+
+        # Publish the 
+        self.cmd_pub.publish(ads)
 '''
 Apply the kinematic model to the passed pose and control
   pose: The current state of the robot [x, y, theta]
@@ -168,9 +178,9 @@ Returns a Tx3 matrix where the t-th row corresponds to the robot's pose at time 
 '''
 def generate_rollout(init_pose, controls, car_length, T):
     # create an empty array for the trajectories
-    trajectory_array = controls = np.zeros((T,3), dtype=np.float)
+    trajectory_array = np.zeros((T,3), dtype=np.float)
     current_pose = np.array([0.0,0.0,0.0], dtype=np.float)
-    
+
     # Loop that runs for all the elements in the control array, calls the kinematic_model_step
     # and adds the resulting pose to the trajectory_array
     for i in xrange(controls.shape[0]):
@@ -246,3 +256,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
