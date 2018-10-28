@@ -120,7 +120,7 @@ class LaserWanderer:
         #       delta_costs[n] += cost of the t=traj_depth step of trajectory n
         #   traj_depth += 1 
         # YOUR CODE HERE
-        while (rospy.Time.now().to_sec() < start + compute_time):
+        while (rospy.Time.now().to_sec() < (start + self.compute_time)):
             pass
 
         # Find the delta that has the smallest cost and execute it by publishing
