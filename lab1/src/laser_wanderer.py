@@ -95,7 +95,20 @@ class LaserWanderer:
         # NOTE THAT NO COORDINATE TRANSFORMS ARE NECESSARY INSIDE OF THIS FUNCTION
 
         # YOUR CODE HERE
-        pass
+
+	#reading the laser message
+	#find the index of the ranges array matches the sterring angle (delta)
+	#find out if rollout_pose (x,y) is closer/farther than laser range
+	#return the init_cost + either 0 or max_penalty(10000)
+
+	cost = np.abs(delta)
+	angle = math.atan2(rollout_pose[1], rollout_pose[0])
+	laser_distance = laser_msg.ranges[(angle-laser_msg.angle_min)/laser_msg.angle_increment]
+	pose_distance = math.pow(rollout_pose[0],2) + math.pow(rollout_pose[1],2)
+	if pose_distance > (laser_distance - np.abs(self.laser_offset)):
+		cost = cost + MAX_PENALTY
+	return cost
+
     
     '''
     Controls the steering angle in response to the received laser scan. Uses approximately
@@ -120,7 +133,7 @@ class LaserWanderer:
         #       delta_costs[n] += cost of the t=traj_depth step of trajectory n
         #   traj_depth += 1 
         # YOUR CODE HERE
-        while (rospy.Time.now().to_sec() < (start + self.compute_time)):
+        while (rospy.Time.now().to_sec() < start + compute_time):
             pass
 
         # Find the delta that has the smallest cost and execute it by publishing
