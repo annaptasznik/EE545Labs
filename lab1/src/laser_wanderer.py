@@ -67,7 +67,14 @@ class LaserWanderer:
 
         # Transform the last pose of each trajectory to be w.r.t the world and insert into
         # the pose array
-        # YOUR CODE HERE
+        
+        for i in xrange(self.rollouts.shape[0]):
+            newPose = Pose()
+            newPose.position.x = self.rollouts[i,299,0]
+            newPose.position.y = self.rollouts[i,299,1]
+            newPose.position.z = 0.0
+            newPose.orientation = utils.angle_to_quaternion(self.rollouts[i,299,2])
+            pa.poses.append (newPose)
 
         self.viz_pub.publish(pa)
     
@@ -98,11 +105,20 @@ class LaserWanderer:
 
         angle = math.atan2(rollout_pose[1], rollout_pose[0])
 
-        laser_distance = laser_msg.ranges[int(round((angle-laser_msg.angle_min)/laser_msg.angle_increment))]
+        laser_distance0 = laser_msg.ranges[int(round((angle-laser_msg.angle_min)/laser_msg.angle_increment))]
+        laser_distance1 = laser_msg.ranges[int(round((angle-laser_msg.angle_min)/laser_msg.angle_increment))+1]
+        laser_distance2 = laser_msg.ranges[int(round((angle-laser_msg.angle_min)/laser_msg.angle_increment))-1]
+        
         pose_distance = math.pow(rollout_pose[0],2) + math.pow(rollout_pose[1],2)
 
-        if pose_distance > (laser_distance - np.abs(self.laser_offset)):
+        if pose_distance > (laser_distance0 - np.abs(self.laser_offset)):
             cost = cost + MAX_PENALTY
+        if pose_distance > (laser_distance1 - np.abs(self.laser_offset)):
+            cost = cost + MAX_PENALTY
+        if pose_distance > (laser_distance2 - np.abs(self.laser_offset)):
+            cost = cost + MAX_PENALTY
+
+        cost = cost / 3
 
         return cost
     
@@ -123,18 +139,10 @@ class LaserWanderer:
         # the cost of each trajectory at time t = traj_depth and add those costs to delta_costs
         # as appropriate
 
-        # Pseudo code
-        # while(you haven't run out of time AND traj_depth < T):
-        #   for each trajectory n:
-        #       delta_costs[n] += cost of the t=traj_depth step of trajectory n
-        #   traj_depth += 1 
-        # YOUR CODE HERE
-
         while (rospy.Time.now().to_sec() < (start + self.compute_time)):
             for n in xrange(self.deltas.shape[0]):
                 for traj_depth in xrange(self.rollouts.shape[1]):
                     delta_costs[n] += self.compute_cost(self.deltas[n],self.rollouts[n,traj_depth,:],msg)
-              
 
         # Find the delta that has the smallest cost and execute it by publishing
         chosen_delta = np.argmin(delta_costs)
