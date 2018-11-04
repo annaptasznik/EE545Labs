@@ -105,17 +105,17 @@ class SensorModel:
     #   You may choose to use self.laser_angles and self.downsampled_angles here
     # YOUR CODE HERE
 
-    downsampled_ranges = msg.ranges[0:: self.LASER_RAY_STEP]
-    downsampled_angles = self.laser_angles[0:: self.LASER_RAY_STEP]
+    downsampled_ranges = np.array(msg.ranges[0::self.LASER_RAY_STEP])
+    downsampled_angles = np.array(self.laser_angles[0::self.LASER_RAY_STEP])
+
+	#np.array(self.laser_angles[0::self.LASER_RAY_STEP])
     
-    downsampled_angles = np.asarray(downsampled_angles)
-    downsampled_ranges = np.asarray(downsampled_ranges)
+    #downsampled_angles = np.asarray(downsampled_angles)
+    #downsampled_ranges = np.asarray(downsampled_ranges)
 
-    downsampled_angles.astype(np.float32)
-    downsampled_ranges.astype(np.float32)
+    #downsampled_angles.astype(np.float32)
+    #downsampled_ranges.astype(np.float32)
 
-    print downsampled_angles.dtype
-    print downsampled_ranges.dtype
 
     if len(downsampled_ranges) == len(downsampled_angles):
         print "DOWNSAMPLE ARRAYS ARE SAME LENGTH"
@@ -141,14 +141,22 @@ class SensorModel:
   '''  
   def precompute_sensor_model(self, max_range_px):
 
+
     table_width = int(max_range_px) + 1
     sensor_model_table = np.zeros((table_width,table_width))
+
+    p_hit = 1
+    p_short = 1
+    p_max = 1
+    p_rand = 1
 
     # Populate sensor_model_table according to the laser beam model specified
     # in CH 6.3 of Probabilistic Robotics
     # Note: no need to use any functions from utils.py to compute between world
     #       and map coordinates here    
     # YOUR CODE HERE
+
+
     # Pseudo-code
     # for d in xrange(table_width):
     #   possibly some stuff here
