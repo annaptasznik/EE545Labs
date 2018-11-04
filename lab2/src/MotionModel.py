@@ -10,11 +10,11 @@ from vesc_msgs.msg import VescStateStamped
 import matplotlib.pyplot as plt
 
 # YOUR CODE HERE (Set these values and use them in motion_cb)
-KM_V_NOISE = # Kinematic car velocity noise std dev
-KM_DELTA_NOISE = # Kinematic car delta noise std dev
-KM_X_FIX_NOISE = # Kinematic car x position constant noise std dev
-KM_Y_FIX_NOISE = # Kinematic car y position constant noise std dev
-KM_THETA_FIX_NOISE = # Kinematic car theta constant noise std dev
+KM_V_NOISE = 0.1         # Kinematic car velocity noise std dev
+KM_DELTA_NOISE = 0.1     # Kinematic car delta noise std dev
+KM_X_FIX_NOISE = 0.1     # Kinematic car x position constant noise std dev
+KM_Y_FIX_NOISE = 0.1     # Kinematic car y position constant noise std dev
+KM_THETA_FIX_NOISE = 0.1 # Kinematic car theta constant noise std dev
 
 '''
   Propagates the particles forward based on the velocity and steering angle of the car
@@ -85,6 +85,10 @@ class KinematicMotionModel:
     # Note that control_val = (raw_msg_val - offset_param) / gain_param
     # E.g: curr_speed = (msg.state.speed - self.SPEED_TO_ERPM_OFFSET) / self.SPEED_TO_ERPM_GAIN
     # YOUR CODE HERE
+    max_noise_sample = 10
+
+    curr_v = (msg.state.speed - self.SPEED_TO_ERPM_OFFSET) / self.SPEED_TO_ERPM_GAIN
+    curr_delta = (self.last_servo_cmd -self.STEERING_TO_SERVO_OFFSET) / self.STEERING_TO_SERVO_GAIN
     
     # Propagate particles forward in place
       # Sample control noise and add to nominal control
@@ -96,6 +100,33 @@ class KinematicMotionModel:
       # All updates to self.particles should be in-place
     # YOUR CODE HERE
 
+    # Get noise
+    delta_noise_sample = np.random.normal(curr_delta, KM_DELTA_NOISE, MAX_PARTICLES)
+    v_noise_sample = np.random.normal(curr_v, KM_V_NOISE, MAX_PARTICLES)
+    
+    x_noise_sample = np.random.normal(0, KM_X_FIX_NOISE, MAX_PARTICLES)
+    y_noise_sample = np.random.normal(0, KM_Y_FIX_NOISE, MAX_PARTICLES)
+    theta_noise_sample = np.random.normal(0 ,KM_THETA_FIX_NOISE, MAX_PARTICLES)
+
+    beta = np.arctan(0.5*np.tan(delta_noise_sample))
+
+    print beta.shape
+    print delta_noise_sample.shape
+    print particles.shape
+
+    x_t = np.zeros((MAX_PARTICLES,3))
+
+    x_t[:,2] = (v_noise_sample/car_length)*np.sin(2*beta)*TEST_DT
+    x_t[:,0] = (self.CAR_LENGTH/(np.sin(2*beta)))*(np.sin(x_t[:,2]))
+    x_t[:,1] = (self.CAR_LENGTH/(np.sin(2*beta)))*(-np.cos(x_t[:,2]))
+
+    particles[:,2] = x_t[:,2] + theta_noise_sample
+    particles[:,0] = x_t[:,0] + x_noise_sample
+    particles[:,1] = x_t[:,1] + y_noise_sample
+
+    print x_t
+    print particles
+  
     self.last_vesc_stamp = msg.header.stamp    
     self.state_lock.release()
 
@@ -104,7 +135,7 @@ class KinematicMotionModel:
 '''
 
 TEST_SPEED = 1.0 # meters/sec
-TEST_STEERING_ANGLE = 0.34 # radians
+TEST_STEERING_ANGLE = -0.34 # radians
 TEST_DT = 1.0 # seconds
 
 if __name__ == '__main__':
@@ -154,6 +185,7 @@ if __name__ == '__main__':
   
   kmm.state_lock.acquire()
   # Visualize particles
+  plt.axis([-1.2, 1.6, -1.2, 1.6])
   plt.xlabel('x')
   plt.ylabel('y')
   plt.scatter([0],[0], c='r')
