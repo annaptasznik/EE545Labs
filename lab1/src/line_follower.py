@@ -110,7 +110,6 @@ class LineFollower:
         trnl_sign = 1
       translation_error = ((((goal_x-current_x)**2)+(goal_y - current_y)**2)**0.5)* trnl_sign
 
-      #print goal_theta - current_theta
       rotation_error = (goal_theta - current_theta)
     
 
@@ -122,7 +121,6 @@ class LineFollower:
       error =  self.translation_weight * translation_error + self.rotation_weight * rotation_error
 
       return True, error
-
 
     
   '''
@@ -163,7 +161,8 @@ class LineFollower:
         integ_error = integ_error+(0.5)*(e1-e0)*(t1-t0)
       except:
         pass
-    
+
+
     # Compute the steering angle as the sum of the pid errors
     return self.kp*error + self.ki*integ_error + self.kd * deriv_error
     
@@ -218,8 +217,6 @@ def main():
   
   # Use rospy.wait_for_message to get the plan msg
   plan_msg = rospy.wait_for_message('/planner_node/car_plan', PoseArray)
-
-#  print plan_msg
 
   # Convert the plan msg to a list of 3-element numpy arrays
   #     Each array is of the form [x,y,theta]
