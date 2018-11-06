@@ -118,7 +118,17 @@ class ParticleFilter():
     # Update weights in place so that all particles have the same weight and the 
     # sum of the weights is one.
     # YOUR CODE HERE
-  
+    for i in range(len(self.particles)):
+      in_bounds = 0
+      w = 0
+      h = 0
+      while not in_bounds:
+        w = np.random.randint(0, self.permissible_region.shape[0])
+        h = np.random.randint(0, self.permissible_region.shape[1])
+        in_bounds = self.permissible_region[w][h]
+      self.particles[i] = util.point([w,h])
+    utils.map_to_world(self.particles,self.map_info)
+    self.weights[:] = [1 / len(self.weights)]
     self.state_lock.release()
     
   '''
@@ -130,7 +140,7 @@ class ParticleFilter():
   '''
   def publish_tf(self,pose,stamp=None):
     if stamp is None:
-        stamp = rospy.Time.now()
+      stamp = rospy.Time.now()
     try:
       # Lookup the offset between laser and odom  
       delta_off, delta_rot = self.tfl.lookupTransform("/laser","/odom",rospy.Time(0))
@@ -154,6 +164,7 @@ class ParticleFilter():
   def expected_pose(self):
     # YOUR CODE HERE
     pass
+
     
   '''
     Callback for '/initialpose' topic. RVIZ publishes a message to this topic when you specify an initial pose 
