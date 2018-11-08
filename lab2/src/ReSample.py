@@ -34,7 +34,20 @@ class ReSampler:
   def resample_naiive(self):
     self.state_lock.acquire()   
    
-    # YOUR CODE HERE
+    # Generates a n_particlesx1 array of bins that the samples will be drawn from
+    bins = np.random.choice(n_particles,n_particles,replace=True)
+    new_particles = np.zeros((n_particles,3))
+    new_weights = np.zeros(n_particles)
+    
+    for m in xrange(n_particles):
+        chosen_bin = bins[m]
+        new_weights[m] = self.weights[chosen_bin]
+        new_particles[m,:] = self.particles[chosen_bin,:]
+
+    self.particles[:,:] = new_particles[:,:]
+    self.weights[:] = new_weights[:]
+    
+    print self.particles
     
     self.state_lock.release()
   
@@ -46,7 +59,26 @@ class ReSampler:
     self.state_lock.acquire()
     
     # YOUR CODE HERE
-    
+    new_particles = np.zeros((n_particles,3))
+    new_weights = np.zeros(n_particles)
+
+    r = np.random.random()*(1.0/float(n_particles))
+    c = self.weights[0]
+    i = 0
+
+    for m in xrange (1, n_particles):
+      u = r + (m-1) * (1.0/float(n_particles))
+      
+      while u > c:
+        i += 1
+        c += self.weights[i]
+      
+      new_particles[m,:] = self.particles[i,:]
+      new_weights[m] = self.weights[i]
+
+    self.particles[:,:] = new_particles[:,:]
+    self.weights[:] = new_weights[:]
+
     self.state_lock.release()
     
 import matplotlib.pyplot as plt
@@ -88,6 +120,7 @@ if __name__ == '__main__':
     
   # Display as histogram
   plt.bar(np.arange(n_particles), histogram)
+  plt.axis([-1,101,0,30])
   plt.xlabel('Particle Idx')
   plt.ylabel('# Of Times Sampled')
   plt.show()    

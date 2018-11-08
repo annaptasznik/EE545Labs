@@ -15,11 +15,11 @@ THETA_DISCRETIZATION = 112 # Discretization of scanning angle
 INV_SQUASH_FACTOR = 0.2    # Factor for helping the weight distribution to be less peaked
 
 # YOUR CODE HERE (Set these values and use them in precompute_sensor_model)
-Z_SHORT =  # Weight for short reading
-Z_MAX =  # Weight for max reading
-Z_RAND =  # Weight for random reading
-SIGMA_HIT = # Noise value for hit reading
-Z_HIT =  # Weight for hit reading
+Z_SHORT = 0.1 # Weight for short reading
+Z_MAX =  0.1 # Weight for max reading
+Z_RAND =  0.1 # Weight for random reading
+SIGMA_HIT = 0.1 # Noise value for hit reading
+Z_HIT =  0.1 # Weight for hit reading
 
 ''' 
   Weights particles according to their agreement with the observed data
@@ -58,7 +58,25 @@ class SensorModel:
     self.range_method.set_sensor_model(self.precompute_sensor_model(max_range_px)) # Load the sensor model expressed as a table
     self.queries = None # Do not modify this variable
     self.ranges = None # Do not modify this variable
-    self.laser_angles = None # The angles of each ray
+
+    
+    arr = []
+    i = 0
+    minangle = -2.08621382713#msg.angle_min
+    maxangle = 2.09234976768 #msg.angle_max
+    angleincr = 0.00613592332229 #msg.angle_increment
+
+    for i in range(0, 682):
+        arr.append(minangle+angleincr)
+        minangle = minangle + angleincr
+	i = i +1
+
+
+    arr = np.asarray(arr)
+
+    self.laser_angles = arr # The angles of each ray
+    
+    
     self.downsampled_angles = None # The angles of the downsampled rays 
     self.do_resample = False # Set so that outside code can know that it's time to resample
     
@@ -71,6 +89,8 @@ class SensorModel:
   '''    
   def lidar_cb(self, msg):
     self.state_lock.acquire()
+
+    #print msg
  
     # Compute the observation obs
     #   obs is a a two element tuple
@@ -84,6 +104,25 @@ class SensorModel:
     #   Set all range measurements that are NAN or 0.0 to self.MAX_RANGE_METERS
     #   You may choose to use self.laser_angles and self.downsampled_angles here
     # YOUR CODE HERE
+
+    downsampled_ranges = msg.ranges[0:: self.LASER_RAY_STEP]
+    downsampled_angles = self.laser_angles[0:: self.LASER_RAY_STEP]
+    
+    downsampled_angles = np.asarray(downsampled_angles)
+    downsampled_ranges = np.asarray(downsampled_ranges)
+
+    downsampled_angles.astype(np.float32)
+    downsampled_ranges.astype(np.float32)
+
+    print downsampled_angles.dtype
+    print downsampled_ranges.dtype
+
+    if len(downsampled_ranges) == len(downsampled_angles):
+        print "DOWNSAMPLE ARRAYS ARE SAME LENGTH"
+    else:
+        print 'DOWNSAMPLE ARRAYS ARE NOT OF SAME LENGTH'
+
+    obs = (downsampled_ranges, downsampled_angles)
 
     self.apply_sensor_model(self.particles, obs, self.weights)
     self.weights /= np.sum(self.weights)
@@ -160,7 +199,8 @@ if __name__ == '__main__':
 
   rospy.init_node("sensor_model", anonymous=True) # Initialize the node
 
-  bag_path = rospy.get_param("~bag_path", '/home/car-user/racecar_ws/src/ta_lab2/bags/laser_scans/laser_scan1.bag')
+  bag_path = rospy.get_param("~bag_path", '/home/car-user/anptaszn/src/lab2/bags/laser_scans/laser_scan1.bag')
+  # /home/car-user/racecar_ws/src/ta_lab2/bags/laser_scans/laser_scan1.bag
   scan_topic = rospy.get_param("~scan_topic", "/scan") # The topic containing laser scans
   laser_ray_step = int(rospy.get_param("~laser_ray_step")) # Step for downsampling laser scans
   exclude_max_range_rays = bool(rospy.get_param("~exclude_max_range_rays")) # Whether to exclude rays that are beyond the max range
