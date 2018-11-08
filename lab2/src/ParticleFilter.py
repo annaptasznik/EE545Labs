@@ -129,6 +129,7 @@ class ParticleFilter():
       self.particles[i] = util.point([w,h])
     utils.map_to_world(self.particles,self.map_info)
     self.weights[:] = [1 / len(self.weights)]
+
     self.state_lock.release()
     
   '''
@@ -163,8 +164,10 @@ class ParticleFilter():
   '''
   def expected_pose(self):
     # YOUR CODE HERE
-    pass
-
+    expected_theta = np.atan2(np.sum([np.sin(self.particles[i][2]) for i in range(len(self.particles))]), np.sum([np.cos(self.particles[i][2]) for i in range(len(self.particles))]))                                         # calculate theta
+    expected_x = np.sum([self.weights[i] * self.particles[i][0] for i in range(len(self.particles))]) # calculate x
+    expected_y = np.sum([self.weights[i] * self.particles[i][1] for i in range(len(self.particles))]) # calculate y
+    return [expected_x, expected_y, expected_theta]
     
   '''
     Callback for '/initialpose' topic. RVIZ publishes a message to this topic when you specify an initial pose 
