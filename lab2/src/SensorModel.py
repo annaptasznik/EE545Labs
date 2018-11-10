@@ -198,12 +198,38 @@ class SensorModel:
     table_width = int(max_range_px) + 1
     sensor_model_table = np.zeros((table_width,table_width))
 
-    for d in xrange(table_width):
-      for r in xrange(table_width):
-        p = self.get_prob(r,d)     
-        sensor_model_table[r,d] = p
+    # Populate sensor_model_table according to the laser beam model specified
+    # in CH 6.3 of Probabilistic Robotics
+    # Note: no need to use any functions from utils.py to compute between world
+    #       and map coordinates here    
+    # YOUR CODE HERE
+    # Pseudo-code
+    # for d in xrange(table_width):
+    #   possibly some stuff here
+    #   for r in xrange(table_width):
+    #     Populate the sensor model table at (r,d) with the probability of 
+    #     observing measurement r (in pixels)
+    #     when the expected measurement is d (in pixels)
+    # Note that the 'self' parameter is completely unused in this function
+    
 
+    lambda_short = 0.001
+
+    for d in xrange(table_width):
+      normalizer = 0
+      for r in xrange(table_width):
+	# find p
+        p_hit = 1.0/(2.0*np.pi * np.power(SIGMA_HIT,2) ) * np.exp( -0.5*np.power((r-d),2) / np.power(SIGMA_HIT, 2) )
+        p_short = float(lambda_short * (np.exp(-lambda_short*r)) ) 
+        p_max = (0,1.0)[r==(table_width-1)]
+        p_rand = 1.0/max_range_px
+        p = Z_HIT*p_hit + Z_SHORT*p_short + Z_MAX*p_max + Z_RAND*p_rand
+        sensor_model_table[r,d] = p
+        normalizer += p
+      sensor_model_table[:,d] /= normalizer
+    
     sensor_model_table = sensor_model_table * (1/(table_width)**2) # normalize so all add to 1
+    
     return sensor_model_table
 
   '''
