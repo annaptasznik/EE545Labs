@@ -71,7 +71,6 @@ class SensorModel:
         minangle = minangle + angleincr
 	i = i +1
 
-
     arr = np.asarray(arr)
 
     self.laser_angles = arr # The angles of each ray
