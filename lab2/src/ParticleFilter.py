@@ -3,7 +3,7 @@
 import rospy 
 import numpy as np
 import time
-import utils as Utils
+import utils as utils
 import tf.transformations
 import tf
 from threading import Lock
@@ -126,7 +126,7 @@ class ParticleFilter():
         w = np.random.randint(0, self.permissible_region.shape[0])
         h = np.random.randint(0, self.permissible_region.shape[1])
         in_bounds = self.permissible_region[w][h]
-      self.particles[i] = util.point([w,h])
+      self.particles[i] = utils.point([w,h])
     utils.map_to_world(self.particles,self.map_info)
     self.weights[:] = [1 / len(self.weights)]
 
@@ -180,7 +180,25 @@ class ParticleFilter():
     # Updates the particles in place
     # Updates the weights to all be equal, and sum to one    
     # YOUR CODE HERE
+    # Parse out the elements and create arrays (for easier processing)
+    x_clicked = np.full((n_particles, 1), msg.pose.position.x)
+    y_clicked = np.full((n_particles, 1), msg.pose.position.y)
+    theta_clicked = np.full((n_particles, 1), utils.quaternion_to_angle(msg.pose.orientation))
+
+    # Set the standard deviation for the noise
+    x_noise_sd = 0.01
+    y_noise_sd = 0.01
+    theta_noise_sd = 0.03
     
+    # Create an array containing n_particle samples of a gaussian around zero
+    x_noise_sample = np.random.normal(0, x_noise_sd, n_particles)
+    y_noise_sample = np.random.normal(0, y_noise_sd, n_particles)
+    theta_noise_sample = np.random.normal(0 ,theta_noise_sd, n_particles)
+
+    # Update the particles in place by adding the noise to the received pose
+    self.particles[:,0] = x_clicked[:] + x_noise_sample[:]
+    self.particles[:,1] = y_clicked[:] + y_noise_sample[:]
+    self.particles[:,2] = theta_clicked[:] + theta_noise_sample[:]
     self.state_lock.release()
     
   '''
