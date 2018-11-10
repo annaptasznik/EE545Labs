@@ -126,9 +126,9 @@ class ParticleFilter():
         w = np.random.randint(0, self.permissible_region.shape[0])
         h = np.random.randint(0, self.permissible_region.shape[1])
         in_bounds = self.permissible_region[w][h]
-      self.particles[i] = utils.point([w,h])
+      self.particles[i] = [w,h,0]
     utils.map_to_world(self.particles,self.map_info)
-    self.weights[:] = [1 / len(self.weights)]
+    self.weights[:] = [1 / float(len(self.weights))]
 
     self.state_lock.release()
     
@@ -273,6 +273,8 @@ if __name__ == '__main__':
   speed_to_erpm_gain = float(rospy.get_param("/vesc/speed_to_erpm_gain", 4350))   # Gain conversion param from rpm to speed
   steering_angle_to_servo_offset = float(rospy.get_param("/vesc/steering_angle_to_servo_offset", 0.5)) # Offset conversion param from servo position to steering angle
   steering_angle_to_servo_gain = float(rospy.get_param("/vesc/steering_angle_to_servo_gain", -1.2135)) # Gain conversion param from servo position to steering angle    
+
+  #print steering_angle_to_servo_gain
   car_length = float(rospy.get_param("/car_kinematics/car_length", 0.33)) # The length of the car
   
   # Create the particle filter  
