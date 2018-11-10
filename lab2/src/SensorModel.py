@@ -71,6 +71,7 @@ class SensorModel:
         minangle = minangle + angleincr
 	i = i +1
 
+
     arr = np.asarray(arr)
 
     self.laser_angles = arr # The angles of each ray
@@ -104,20 +105,23 @@ class SensorModel:
     #   You may choose to use self.laser_angles and self.downsampled_angles here
     # YOUR CODE HERE
 
-    downsampled_ranges = np.array(msg.ranges[0::self.LASER_RAY_STEP])
-    downsampled_angles = np.array(self.laser_angles[0::self.LASER_RAY_STEP])
+    downsampled_ranges = np.array(np.float32(msg.ranges[0::self.LASER_RAY_STEP]))
+    downsampled_angles = np.array(np.float32(self.laser_angles[0::self.LASER_RAY_STEP]))
 
 	#np.array(self.laser_angles[0::self.LASER_RAY_STEP])
     
     #downsampled_angles = np.asarray(downsampled_angles)
     #downsampled_ranges = np.asarray(downsampled_ranges)
 
-    #downsampled_angles.astype(np.float32)
-    #downsampled_ranges.astype(np.float32)
+    downsampled_angles.astype(np.float32)
+    downsampled_ranges.astype(np.float32)
+
+    # NEED TO REPLACE ALL NANS AND ZEROS
+    #numpy.num_to_nan()
 
 
     if len(downsampled_ranges) == len(downsampled_angles):
-        print "DOWNSAMPLE ARRAYS ARE SAME LENGTH"
+        pass
     else:
         print 'DOWNSAMPLE ARRAYS ARE NOT OF SAME LENGTH'
 
@@ -129,7 +133,58 @@ class SensorModel:
     self.last_laser = msg
     self.do_resample = True
     self.state_lock.release()
-    
+  
+
+  '''
+  Given ztk and ztk_star (measured and expected ranges, respectively) calculate the probability. 
+  '''
+  def get_prob(self,ztk, ztk_star):
+
+    # dummy variable; highlights values that are still unknown
+    unknown = 1.0
+ 
+    # figure out what ztk, ztk* is
+    #ztk = unknown
+    #ztk_star = unknown
+
+    # find p_hit
+    if 0.0 <= ztk < Z_MAX:
+      normal_dist = (1.0/ (2.0*np.pi*(SIGMA_HIT**2.0))**0.5)*(np.exp(-0.5*(((ztk - ztk_star)**2.0)/(SIGMA_HIT**2.0))))
+      dztk = 0.0000000001
+      normalizer_hit = 1 # instead of normalizing here, we will normalize in the array per row
+      p_hit = normal_dist / normalizer_hit 
+    else:
+      p_hit = 0.0 
+
+    # find p_short
+    if 0.0 <= ztk < ztk_star:
+      lambda_short = 0.001 # we chose to make lambda_short a very small number
+      normalizer_short = 1.0/(1.0- np.exp(-lambda_short*ztk_star))
+      p_short =  normalizer_short*lambda_short*np.exp(-lambda_short*ztk)
+    else:
+      p_short = 0.0
+
+    # find p_max
+    if ztk == Z_MAX: # 1 if Z = Z_MAX. 0 otherwise. is it ztk or ztk_star?
+      p_max = 1.0 
+    else:
+      p_max = 0.0
+
+    # find p_rand
+    if 0.0 <= ztk < Z_MAX:
+      p_rand = 1.0 / Z_MAX 
+    else:
+      p_rand = 0.0 
+
+    # vector calc of p from textbook is p = Z_array_T dot P_array
+    Z_array = np.array([Z_HIT,Z_SHORT,Z_MAX,Z_RAND])
+    Z_array_T = np.transpose(Z_array)
+    P_array = np.array([p_hit,p_short,p_max,p_rand])
+    # p = P(Ztk | xt,m)
+    p = np.dot(Z_array_T, P_array)
+
+    return p
+ 
   '''
     Compute table enumerating the probability of observing a measurement 
     given the expected measurement
@@ -140,31 +195,15 @@ class SensorModel:
   '''  
   def precompute_sensor_model(self, max_range_px):
 
-
     table_width = int(max_range_px) + 1
     sensor_model_table = np.zeros((table_width,table_width))
 
-    p_hit = 1
-    p_short = 1
-    p_max = 1
-    p_rand = 1
+    for d in xrange(table_width):
+      for r in xrange(table_width):
+        p = self.get_prob(r,d)     
+        sensor_model_table[r,d] = p
 
-    # Populate sensor_model_table according to the laser beam model specified
-    # in CH 6.3 of Probabilistic Robotics
-    # Note: no need to use any functions from utils.py to compute between world
-    #       and map coordinates here    
-    # YOUR CODE HERE
-
-
-    # Pseudo-code
-    # for d in xrange(table_width):
-    #   possibly some stuff here
-    #   for r in xrange(table_width):
-    #     Populate the sensor model table at (r,d) with the probability of 
-    #     observing measurement r (in pixels)
-    #     when the expected measurement is d (in pixels)
-    # Note that the 'self' parameter is completely unused in this function
-    
+    sensor_model_table = sensor_model_table * (1/(table_width)**2) # normalize so all add to 1
     return sensor_model_table
 
   '''
