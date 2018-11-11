@@ -15,7 +15,8 @@ KM_DELTA_NOISE = 0.03       # Kinematic car delta noise std dev
 KM_X_FIX_NOISE = 0.01       # Kinematic car x position constant noise std dev
 KM_Y_FIX_NOISE = 0.01       # Kinematic car y position constant noise std dev
 KM_THETA_FIX_NOISE = 0.03   # Kinematic car theta constant noise std dev
-
+MAX_PARTICLES = 1000
+particles = np.zeros((MAX_PARTICLES,3))
 '''
   Propagates the particles forward based on the velocity and steering angle of the car
 '''
@@ -114,7 +115,7 @@ class KinematicMotionModel:
     # Calculate the resulting poses from the noisy controls
     beta = np.arctan(0.5*np.tan(delta_noise_sample))
 
-    x_t[:,2] = (v_noise_sample/car_length)*np.sin(2*beta)*TEST_DT
+    x_t[:,2] = (v_noise_sample/self.CAR_LENGTH)*np.sin(2*beta)*TEST_DT
     x_t[:,0] = (self.CAR_LENGTH/(np.sin(2*beta)))*(np.sin(x_t[:,2])-np.sin(0))
     x_t[:,1] = (self.CAR_LENGTH/(np.sin(2*beta)))*(-np.cos(x_t[:,2])+np.cos(0))
 
