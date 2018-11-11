@@ -47,8 +47,6 @@ class ReSampler:
     self.particles[:,:] = new_particles[:,:]
     self.weights[:] = new_weights[:]
     
-    print self.particles
-    
     self.state_lock.release()
   
   '''
@@ -59,6 +57,8 @@ class ReSampler:
     self.state_lock.acquire()
     
     # YOUR CODE HERE
+    n_particles = self.particles.shape[0]
+
     new_particles = np.zeros((n_particles,3))
     new_weights = np.zeros(n_particles)
 
@@ -66,8 +66,8 @@ class ReSampler:
     c = self.weights[0]
     i = 0
 
-    for m in xrange (1, n_particles):
-      u = r + (m-1) * (1.0/float(n_particles))
+    for m in xrange (0, n_particles):
+      u = r + (m) * (1.0/float(n_particles))
       
       while u > c:
         i += 1
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     
   # Display as histogram
   plt.bar(np.arange(n_particles), histogram)
-  plt.axis([-1,101,0,30])
+  #plt.axis([-1,101,0,30])
   plt.xlabel('Particle Idx')
   plt.ylabel('# Of Times Sampled')
   plt.show()    

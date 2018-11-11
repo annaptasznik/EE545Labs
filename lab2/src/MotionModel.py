@@ -15,8 +15,7 @@ KM_DELTA_NOISE = 0.03       # Kinematic car delta noise std dev
 KM_X_FIX_NOISE = 0.01       # Kinematic car x position constant noise std dev
 KM_Y_FIX_NOISE = 0.01       # Kinematic car y position constant noise std dev
 KM_THETA_FIX_NOISE = 0.03   # Kinematic car theta constant noise std dev
-MAX_PARTICLES = 1000
-particles = np.zeros((MAX_PARTICLES,3))
+
 '''
   Propagates the particles forward based on the velocity and steering angle of the car
 '''
@@ -86,6 +85,8 @@ class KinematicMotionModel:
     # Note that control_val = (raw_msg_val - offset_param) / gain_param
     # E.g: curr_speed = (msg.state.speed - self.SPEED_TO_ERPM_OFFSET) / self.SPEED_TO_ERPM_GAIN
     # YOUR CODE HERE
+    
+    n_particles = self.particles.shape[0]
 
     curr_v = (msg.state.speed - self.SPEED_TO_ERPM_OFFSET) / self.SPEED_TO_ERPM_GAIN
     curr_delta = (self.last_servo_cmd - self.STEERING_TO_SERVO_OFFSET) / self.STEERING_TO_SERVO_GAIN
@@ -101,16 +102,16 @@ class KinematicMotionModel:
     # YOUR CODE HERE
 
     # Get control noise, samples a gaussian centered around the nominal control
-    delta_noise_sample = np.random.normal(curr_delta, KM_DELTA_NOISE, MAX_PARTICLES)
-    v_noise_sample = np.random.normal(curr_v, KM_V_NOISE, MAX_PARTICLES)
+    delta_noise_sample = np.random.normal(curr_delta, KM_DELTA_NOISE, n_particles)
+    v_noise_sample = np.random.normal(curr_v, KM_V_NOISE, n_particles)
     
     # Get position noise, samples a gaussian around zero
-    x_noise_sample = np.random.normal(0, KM_X_FIX_NOISE, MAX_PARTICLES)
-    y_noise_sample = np.random.normal(0, KM_Y_FIX_NOISE, MAX_PARTICLES)
-    theta_noise_sample = np.random.normal(0 ,KM_THETA_FIX_NOISE, MAX_PARTICLES)
+    x_noise_sample = np.random.normal(0, KM_X_FIX_NOISE, n_particles)
+    y_noise_sample = np.random.normal(0, KM_Y_FIX_NOISE, n_particles)
+    theta_noise_sample = np.random.normal(0 ,KM_THETA_FIX_NOISE, n_particles)
 
     # Create an array to store resulting poses
-    x_t = np.zeros((MAX_PARTICLES,3))
+    x_t = np.zeros((n_particles,3))
 
     # Calculate the resulting poses from the noisy controls
     beta = np.arctan(0.5*np.tan(delta_noise_sample))
@@ -120,9 +121,9 @@ class KinematicMotionModel:
     x_t[:,1] = (self.CAR_LENGTH/(np.sin(2*beta)))*(-np.cos(x_t[:,2])+np.cos(0))
 
     # Finally add the position noise and update the particle array
-    particles[:,2] = x_t[:,2] + theta_noise_sample
-    particles[:,0] = x_t[:,0] + x_noise_sample
-    particles[:,1] = x_t[:,1] + y_noise_sample
+    self.particles[:,2] = x_t[:,2] + theta_noise_sample
+    self.particles[:,0] = x_t[:,0] + x_noise_sample
+    self.particles[:,1] = x_t[:,1] + y_noise_sample
   
     self.last_vesc_stamp = msg.header.stamp    
     self.state_lock.release()
