@@ -16,11 +16,11 @@ THETA_DISCRETIZATION = 112 # Discretization of scanning angle
 INV_SQUASH_FACTOR = 0.2    # Factor for helping the weight distribution to be less peaked
 
 # YOUR CODE HERE (Set these values and use them in precompute_sensor_model)
-Z_SHORT = 0.25 # Weight for short reading
-Z_MAX =  0.25 # Weight for max reading
-Z_RAND =  0.25 # Weight for random reading
-SIGMA_HIT = 0.1 # Noise value for hit reading
-Z_HIT =  0.25 # Weight for hit reading
+Z_SHORT = 0.05 # Weight for short reading
+Z_MAX =  0.05 # Weight for max reading
+Z_RAND =  0.05 # Weight for random reading
+SIGMA_HIT = 2.0 # Noise value for hit reading
+Z_HIT =  0.85 # Weight for hit reading
 
 ''' 
   Weights particles according to their agreement with the observed data
@@ -103,8 +103,6 @@ class SensorModel:
     #   You may choose to use self.laser_angles and self.downsampled_angles here
     # YOUR CODE HERE
 
-    print "og samples"
-    print len(msg.ranges), len(self.laser_angles)
 
     downsampled_ranges = np.array(np.float32(msg.ranges[0::self.LASER_RAY_STEP]))
     downsampled_angles = np.array(np.float32(self.laser_angles[0::self.LASER_RAY_STEP]))
@@ -112,7 +110,7 @@ class SensorModel:
     downsampled_angles.astype(np.float32)
     downsampled_ranges.astype(np.float32)
 
-    downsampled_angles[downsampled_angles == 0] =self.MAX_RANGE_METERS 
+    #downsampled_angles[downsampled_angles == 0] =self.MAX_RANGE_METERS 
     downsampled_ranges[downsampled_ranges == 0] =self.MAX_RANGE_METERS
 
     for x in xrange(len(downsampled_ranges)):
@@ -125,9 +123,6 @@ class SensorModel:
         print 'DOWNSAMPLE ARRAYS ARE NOT OF SAME LENGTH'
 
     obs = (downsampled_ranges, downsampled_angles)
-
-    print " downsampled arrays"
-    print len(downsampled_ranges), len(downsampled_angles)
 
     self.apply_sensor_model(self.particles, obs, self.weights)
 
@@ -143,12 +138,14 @@ class SensorModel:
   '''
   Given ztk and ztk_star (measured and expected ranges, respectively) calculate the probability. 
   '''
-  def get_prob(self,ztk, ztk_star):
- 
+  def get_prob(self,ztk, ztk_star, zmax):
+    ztk = np.float32(ztk)
+    ztk_star = np.float32(ztk_star)
+
     # find p_hit
-    if 0.0 <= ztk < Z_MAX:
+    if 0.0 <= ztk < zmax:
       normal_dist = (1.0/ (2.0*np.pi*(SIGMA_HIT**2.0))**0.5)*(np.exp(-0.5*(((ztk - ztk_star)**2.0)/(SIGMA_HIT**2.0))))
-      normalizer_hit = 1 # instead of normalizing here, we will normalize in the array per row
+      normalizer_hit = 1.0 # instead of normalizing here, we will normalize in the array per row
       p_hit = normal_dist / normalizer_hit 
     else:
       p_hit = 0.0 
@@ -162,14 +159,14 @@ class SensorModel:
       p_short = 0.0
 
     # find p_max
-    if ztk == Z_MAX: # 1 if Z = Z_MAX. 0 otherwise. is it ztk or ztk_star?
+    if ztk == zmax:
       p_max = 1.0 
     else:
       p_max = 0.0
 
     # find p_rand
-    if 0.0 <= ztk < Z_MAX:
-      p_rand = 1.0 / Z_MAX 
+    if 0.0 <= ztk < zmax:
+      p_rand = 1.0 / zmax 
     else:
       p_rand = 0.0 
 
@@ -194,13 +191,24 @@ class SensorModel:
 
     table_width = int(max_range_px) + 1
     sensor_model_table = np.zeros((table_width,table_width))
-
+    
     for d in xrange(table_width):
       for r in xrange(table_width):
-        p = self.get_prob(r,d)     
+        p = self.get_prob(r,d, max_range_px+1)     
         sensor_model_table[r,d] = p
 
-    sensor_model_table = sensor_model_table * (1/(table_width)**2) # normalize so all add to 1
+    #normalize columns
+    sensor_model_table = sensor_model_table/sensor_model_table.sum(axis=0,keepdims=1)
+    
+   
+    # check if columns indeed sum to 1
+    #i = 0
+    #for x in xrange(table_width):
+    #  i = i +sensor_model_table[x,1]
+    #print "column sums to " + str(i)
+    
+
+    print sensor_model_table
     return sensor_model_table
 
   '''
@@ -210,10 +218,6 @@ class SensorModel:
       weights: The weights of each particle
   '''
   def apply_sensor_model(self, proposal_dist, obs, weights):
-
-    print "WEIGHT VALUES OK"
-    print weights
-    print len(weights)
         
     obs_ranges = obs[0]
     obs_angles = obs[1]
@@ -232,9 +236,6 @@ class SensorModel:
     # Evaluate the sensor model
     self.range_method.eval_sensor_model(obs_ranges, self.ranges, weights, num_rays, proposal_dist.shape[0])
 
-    print "WEIGHT VALUES NOT OK"
-    print weights
-    print len(weights)
 
     # Squash weights to prevent too much peakiness
     np.power(weights, INV_SQUASH_FACTOR, weights)
@@ -289,9 +290,6 @@ if __name__ == '__main__':
   sm = SensorModel(scan_topic, laser_ray_step, exclude_max_range_rays, 
                    max_range_meters, map_msg, particles, weights)
 
-  print "check particles and weights"
-  print particles.shape[0]
-  print weights.shape[0]
   
   # Give time to get setup
   rospy.sleep(1.0)
