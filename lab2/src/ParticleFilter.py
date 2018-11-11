@@ -164,7 +164,7 @@ class ParticleFilter():
   '''
   def expected_pose(self):
     # YOUR CODE HERE
-    expected_theta = np.atan2(np.sum([np.sin(self.particles[i][2]) for i in range(len(self.particles))]), np.sum([np.cos(self.particles[i][2]) for i in range(len(self.particles))]))                                         # calculate theta
+    expected_theta = np.arctan2(np.sum([np.sin(self.particles[i][2]) for i in range(len(self.particles))]), np.sum([np.cos(self.particles[i][2]) for i in range(len(self.particles))]))                                         # calculate theta
     expected_x = np.sum([self.weights[i] * self.particles[i][0] for i in range(len(self.particles))]) # calculate x
     expected_y = np.sum([self.weights[i] * self.particles[i][1] for i in range(len(self.particles))]) # calculate y
     return [expected_x, expected_y, expected_theta]
