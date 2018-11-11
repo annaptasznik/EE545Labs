@@ -3,7 +3,7 @@
 import rospy 
 import numpy as np
 import time
-import utils as utils
+import utils as Utils
 import tf.transformations
 import tf
 from threading import Lock
@@ -127,7 +127,7 @@ class ParticleFilter():
         h = np.random.randint(0, self.permissible_region.shape[1])
         in_bounds = self.permissible_region[w][h]
       self.particles[i] = [w,h,0]
-    utils.map_to_world(self.particles,self.map_info)
+    Utils.map_to_world(self.particles,self.map_info)
     self.weights[:] = [1 / float(len(self.weights))]
 
     self.state_lock.release()
@@ -164,7 +164,7 @@ class ParticleFilter():
   '''
   def expected_pose(self):
     # YOUR CODE HERE
-    expected_theta = np.atan2(np.sum([np.sin(self.particles[i][2]) for i in range(len(self.particles))]), np.sum([np.cos(self.particles[i][2]) for i in range(len(self.particles))]))                                         # calculate theta
+    expected_theta = np.arctan2(np.sum([np.sin(self.particles[i][2]) for i in range(len(self.particles))]), np.sum([np.cos(self.particles[i][2]) for i in range(len(self.particles))]))                                         # calculate theta
     expected_x = np.sum([self.weights[i] * self.particles[i][0] for i in range(len(self.particles))]) # calculate x
     expected_y = np.sum([self.weights[i] * self.particles[i][1] for i in range(len(self.particles))]) # calculate y
     return [expected_x, expected_y, expected_theta]
@@ -181,9 +181,9 @@ class ParticleFilter():
     # Updates the weights to all be equal, and sum to one    
     # YOUR CODE HERE
     # Parse out the elements and create arrays (for easier processing)
-    x_clicked = np.full((n_particles, 1), msg.pose.position.x)
-    y_clicked = np.full((n_particles, 1), msg.pose.position.y)
-    theta_clicked = np.full((n_particles, 1), utils.quaternion_to_angle(msg.pose.orientation))
+    x_clicked = np.full((n_particles), msg.pose.pose.position.x)
+    y_clicked = np.full((n_particles), msg.pose.pose.position.y)
+    theta_clicked = np.full((n_particles), Utils.quaternion_to_angle(msg.pose.pose.orientation))
 
     # Set the standard deviation for the noise
     x_noise_sd = 0.01
@@ -196,6 +196,11 @@ class ParticleFilter():
     theta_noise_sample = np.random.normal(0 ,theta_noise_sd, n_particles)
 
     # Update the particles in place by adding the noise to the received pose
+
+    print self.particles.shape
+    print x_clicked.shape
+    print x_noise_sample.shape
+
     self.particles[:,0] = x_clicked[:] + x_noise_sample[:]
     self.particles[:,1] = y_clicked[:] + y_noise_sample[:]
     self.particles[:,2] = theta_clicked[:] + theta_noise_sample[:]
