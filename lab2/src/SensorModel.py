@@ -15,7 +15,6 @@ import math
 THETA_DISCRETIZATION = 112 # Discretization of scanning angle
 INV_SQUASH_FACTOR = 0.2    # Factor for helping the weight distribution to be less peaked
 
-# YOUR CODE HERE (Set these values and use them in precompute_sensor_model)
 Z_SHORT = 0.05 # Weight for short reading
 Z_MAX =  0.05 # Weight for max reading
 Z_RAND =  0.05 # Weight for random reading
@@ -61,22 +60,7 @@ class SensorModel:
     self.queries = None # Do not modify this variable
     self.ranges = None # Do not modify this variable
     
-    arr = []
-    i = 0
-    minangle = -2.08621382713#msg.angle_min
-    maxangle = 2.09234976768 #msg.angle_max
-    angleincr = 0.00613592332229 #msg.angle_increment
-
-    for i in range(0, 682):
-        arr.append(minangle+angleincr)
-        minangle = minangle + angleincr
-	i = i +1
-
-    arr = np.asarray(arr)
-
-    self.laser_angles = arr # The angles of each ray
-    
-    
+   
     self.downsampled_angles = None # The angles of the downsampled rays 
     self.do_resample = True # Set so that outside code can know that it's time to resample
     
@@ -101,7 +85,21 @@ class SensorModel:
     #   and vectorizing computations as much as possible
     #   Set all range measurements that are NAN or 0.0 to self.MAX_RANGE_METERS
     #   You may choose to use self.laser_angles and self.downsampled_angles here
-    # YOUR CODE HERE
+
+    # get laser_angles based on msg
+    arr = []
+    i = 0
+    minangle = msg.angle_min
+    maxangle = msg.angle_max
+    angleincr = msg.angle_increment
+    for i in range(0, len(msg.ranges)):
+        arr.append(minangle+angleincr)
+        minangle = minangle + angleincr
+	i = i +1
+
+    arr = np.asarray(arr)
+
+    self.laser_angles = arr # The angles of each ray
 
 
     downsampled_ranges = np.array(np.float32(msg.ranges[0::self.LASER_RAY_STEP]))
@@ -109,18 +107,18 @@ class SensorModel:
 
     downsampled_angles.astype(np.float32)
     downsampled_ranges.astype(np.float32)
-
-    #downsampled_angles[downsampled_angles == 0] =self.MAX_RANGE_METERS 
+     
     downsampled_ranges[downsampled_ranges == 0] =self.MAX_RANGE_METERS
 
     for x in xrange(len(downsampled_ranges)):
       if(math.isnan(downsampled_ranges[x])):
         downsampled_ranges[x] = self.MAX_RANGE_METERS 
 
+    # check is downsampled arrays are the same size
     if len(downsampled_ranges) == len(downsampled_angles):
         pass
     else:
-        print 'DOWNSAMPLE ARRAYS ARE NOT OF SAME LENGTH'
+        print 'Downsampled arrays are not the same size'
 
     obs = (downsampled_ranges, downsampled_angles)
 
@@ -131,9 +129,6 @@ class SensorModel:
     self.last_laser = msg
     self.do_resample = True
     self.state_lock.release()
-
-    
-  
 
   '''
   Given ztk and ztk_star (measured and expected ranges, respectively) calculate the probability. 
@@ -207,8 +202,6 @@ class SensorModel:
     #  i = i +sensor_model_table[x,1]
     #print "column sums to " + str(i)
     
-
-    print sensor_model_table
     return sensor_model_table
 
   '''
