@@ -74,10 +74,9 @@ class ReSampler:
         c += self.weights[i]
       
       new_particles[m,:] = self.particles[i,:]
-      new_weights[m] = self.weights[i]
 
     self.particles[:,:] = new_particles[:,:]
-    self.weights[:] = new_weights[:]
+    self.weights[:] = 1.0/n_particles
 
     self.state_lock.release()
     
