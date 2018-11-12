@@ -128,7 +128,7 @@ class ParticleFilter():
         in_bounds = self.permissible_region[w][h]
       self.particles[i] = [w,h,0]
     Utils.map_to_world(self.particles,self.map_info)
-    self.weights[:] = [1 / float(len(self.weights))]
+    self.weights[:] = 1 / float(self.particles.shape[0])
 
     self.state_lock.release()
     
@@ -204,6 +204,10 @@ class ParticleFilter():
     self.particles[:,0] = x_clicked[:] + x_noise_sample[:]
     self.particles[:,1] = y_clicked[:] + y_noise_sample[:]
     self.particles[:,2] = theta_clicked[:] + theta_noise_sample[:]
+    
+    # Updates the weights to all be equal, and sum to one  
+    self.weights[:] = 1 / float(self.particles.shape[0])
+
     self.state_lock.release()
     
   '''
