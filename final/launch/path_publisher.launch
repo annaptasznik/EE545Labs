@@ -1,0 +1,9 @@
+<launch>
+  
+<node name = "path_publisher" type = "path_publisher.py" pkg = "final" output="screen">
+	
+	<param name = "plan_topic" type = "str" value = "/planner_node/full_path_plan" /> 
+	
+</node>  
+
+</launch>
