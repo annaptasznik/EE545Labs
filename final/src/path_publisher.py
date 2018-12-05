@@ -36,8 +36,11 @@ if __name__ == "__main__":
     plan_pa_msg = PoseArray()
     plan_pa_msg.header.frame_id = "/map"
     plan_pa_msg.poses = path_plan
-    plan_pub.publish(plan_pa_msg)
-    print "published the plan."
+
+    while 3==3:
+      rospy.sleep(10)
+      plan_pub.publish(plan_pa_msg)
+      print "published the plan."
 
 
     rospy.spin()
