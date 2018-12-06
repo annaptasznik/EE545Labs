@@ -92,6 +92,22 @@ def world_to_map(pose, map_info):
     config[2] += angle
     
     return config
+
+'''
+  Creates a header with the given frame_id and stamp. Default value of stamp is
+  None, which results in a stamp denoting the time at which this function was called
+    frame_id: The desired coordinate frame
+    stamp: The desired stamp
+    Returns: The resulting header
+'''
+def make_header(frame_id, stamp=None):
+    if stamp == None:
+        stamp = rospy.Time.now()
+    header = Header()
+    header.stamp = stamp
+    header.frame_id = frame_id
+    return header
+
       
 ''' 
 Convert a pixel location in the map to a pose in the world
@@ -123,3 +139,4 @@ def map_to_world(pose,map_info):
     config[2] += angle
 
     return config
+
