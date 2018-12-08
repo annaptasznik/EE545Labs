@@ -1,0 +1,5 @@
+<launch> 
+    <node name="Vision_Controller" type="Vision_Controller.py" pkg="final" output="screen" >
+		<param name="speed" type="double" value="1.0" />
+	</node>
+</launch>
