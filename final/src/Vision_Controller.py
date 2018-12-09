@@ -19,50 +19,89 @@ IMAGE_TOPIC = '/camera/color/image_processed'
 class Vision_Controller:
     
     # Initializer
-    def __init__(self, ):
+    def __init__(self, lowerLimit, upperLimit, speed, pixel_to_angle):
         self.sub = rospy.Subscriber(CAMERA_TOPIC, Image, self.image_process_cb, queue_size = 1)
         self.controller_pub = rospy.Publisher(CONTROL_TOPIC, AckermannDriveStamped, queue_size = 1)
         self.image_pub = rospy.Publisher(IMAGE_TOPIC, Image, queue_size = 1)
+
+        self.bridge = CvBridge()
+        self.upperLimit = upperLimit
+        self.lowerLimit = lowerLimit
+        
+        self.speed = speed
+        self.pixel_to_angle = pixel_to_angle
         
     # Callback to process the incoming image from the camera    
     def image_process_cb(self, msg):
-        x, y = color_track(msg)
-        print x, y
+        # First look to see if we have found a blue object
+        x, y = self.color_track(msg)
+ 
+        # Interpret the x,y position and make appropriate control
+        if((x != 0 and y !=0) and (y < 360) and (x < 320 or x < 400)):
+            print 'blue object detected'       
+            ads = self.compute_steering(x, y)
+            self.controller_pub.publish(ads)
 
-        # CODE HERE
-        # Put in code to interpret the x,y position and make appropriate control
+    def color_track(self, msg): 
+        # minimum size to be considered a valid object
+        size_limit = 100000 
 
-def color_track(self, msg):
-    lower_blue = np.array([110,50,50])
-    upper_blue = np.array([130,255,255])
-    size_limit = 100000 
+        # Convert to CV2 image
+        try:
+            image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        except CvBridgeError as e:
+            print(e)
 
-    # Convert to CV2 image
-    try:
-        image = CvBridge.imgmsg_to_cv2(msg, "bgr8")
-    except CvBridgeError as e:
-    print(e)
+        # Convert to HSV color and apply thresholds to detect blue
+        hsv_image  = cv2.cvtColor(image,cv2.COLOR_RGB2HSV)
+        mask_image = cv2.inRange(hsv_image, self.lowerLimit, self.upperLimit)
+            
+        moments = cv2.moments(mask_image, 0)
+        area    = moments['m00']
 
-    image      = cv2.Smooth(image, image, cv2.CV_BLUR, 3)
-    hsv_image  = cv2.cvtColor(cv_image,cv2.COLOR_RGB2HSV)
-    mask_image = cv2.inRange(cv_image_hsv,lower_blue,upper_blue)
-
-    moments = cv2.Moments(mask_image, 0)        
-    area    = cv2,GetCentralMoment(moments, 0, 0)
-
-    if(area > size_limit):
-        x = cv2.GetSpatialMoment(moments, 1, 0)/area
-        y = cv2.GetSpatialMoment(moments, 0, 1)/area
-
-        overlay = cv.CreateImage(cv.GetSize(img), 8, 3)
-        cv.Circle(overlay, (x, y), 2, (255, 255, 255), 20)
-        cv.Add(image, overlay, image)
-        cv.Merge(mask_image, None, None, None, image)
-
-    # Publish the image so we can view it for debug
-    self.image_pub.publish(CvBridge.cv2_to_imgmsg(image, "passthrough"))
-
-    return x, y
+        if(area > size_limit):
+            x = int(moments['m10'] / area)
+            y = int(moments['m01'] / area)
         
+        else:
+            x = 0
+            y = 0
+
+        # Publish the image so we can view it for debug
+        self.image_pub.publish(self.bridge.cv2_to_imgmsg(mask_image, "passthrough"))
+
+        return x, y
+
+    def compute_steering(self, x, y):
+        error = x - 320
+        delta = error * self.pixel_to_angle
+        
+        ads = AckermannDriveStamped()
+        ads.header.frame_id = '/map'
+        ads.header.stamp = rospy.Time.now()
+        ads.drive.steering_angle = delta
+        ads.drive.speed = self.speed
+
+        return ads
+        
+def main():
+    rospy.init_node('Vision_Controller', anonymous=True)
+    speed = rospy.get_param("~speed", 1.0)
+    pixel_to_angle = rospy.get_param("~pixel_to_angle", 0.0014)
+    
+    # Upper and lower limit for blue values
+    blue = np.uint8([[[70, 120, 175]]])
+    hsvBlue = cv2.cvtColor(blue,cv2.COLOR_BGR2HSV)
+    print(hsvBlue)
+    
+    lowerLimit = (hsvBlue[0][0][0]-10,100,100)
+    upperLimit = (hsvBlue[0][0][0]+10,255,255)
+    print(upperLimit)
+    print(lowerLimit)
+                                     
+    vc = Vision_Controller(lowerLimit, upperLimit, speed, pixel_to_angle)
+    rospy.spin()
+
 if __name__ == '__main__':
-  rospy.spin()
+    main()
+  
