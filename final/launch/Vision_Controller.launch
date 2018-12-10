@@ -1,5 +1,9 @@
 <launch> 
     <node name="Vision_Controller" type="Vision_Controller.py" pkg="final" output="screen" >
+    <param name="R_value" type="int" value="70" />
+    <param name="G_value" type="int" value="120" />
+    <param name="B_value" type="int" value="175" />
+    <param name="min_area" type="double" value="50000" />
     <param name="speed" type="double" value="1.0" />
     <param name="pixel_to_angle" type="double" value="0.0014" />
     </node>
