@@ -16,7 +16,7 @@ CONTROL_TOPIC = '/vesc/high_level/ackermann_cmd_mux/input/nav_0'
 CAMERA_TOPIC = '/camera/color/image_raw'
 IMAGE_TOPIC = '/camera/color/image_processed'
 
-class Vision_Controller:
+class Red_Controller:
     
     # Initializer
     def __init__(self, lowerLimit, upperLimit, speed, pixel_to_angle):
@@ -29,7 +29,6 @@ class Vision_Controller:
         self.lowerLimit = lowerLimit
         
         self.speed = speed
-        self.pixel_to_angle = pixel_to_angle
         
     # Callback to process the incoming image from the camera    
     def image_process_cb(self, msg):
@@ -37,8 +36,8 @@ class Vision_Controller:
         x, y = self.color_track(msg)
  
         # Interpret the x,y position and make appropriate control
-        if((x != 0 and y !=0) and (y < 360) and (x < 320 or x < 400)):
-            print 'blue object detected'       
+        if((x != 0 and y !=0) and (y < 360) and (x > 120 or x < 500)):
+            print 'red object detected'       
             ads = self.compute_steering(x, y)
             self.controller_pub.publish(ads)
 
@@ -73,8 +72,11 @@ class Vision_Controller:
         return x, y
 
     def compute_steering(self, x, y):
-        error = x - 320
-        delta = float(-error * self.pixel_to_angle)
+        if(x > 360):
+            delta = 0.5
+
+        if(x < 360):
+            delta = -0.5
         
         ads = AckermannDriveStamped()
         ads.header.frame_id = '/map'
@@ -87,19 +89,18 @@ class Vision_Controller:
 def main():
     rospy.init_node('Vision_Controller', anonymous=True)
     speed = rospy.get_param("~speed", 1.0)
-    pixel_to_angle = rospy.get_param("~pixel_to_angle", 0.0014)
     
     # Upper and lower limit for blue values
-    blue = np.uint8([[[70, 120, 175]]])
-    hsvBlue = cv2.cvtColor(blue,cv2.COLOR_BGR2HSV)
-    print(hsvBlue)
+    red = np.uint8([[[70, 120, 175]]])
+    hsvRed = cv2.cvtColor(red,cv2.COLOR_BGR2HSV)
+    print(hsvRed)
     
-    lowerLimit = (hsvBlue[0][0][0]-10,100,100)
-    upperLimit = (hsvBlue[0][0][0]+10,255,255)
+    lowerLimit = (hsvRed[0][0][0]-10,100,100)
+    upperLimit = (hsvRed[0][0][0]+10,255,255)
     print(upperLimit)
     print(lowerLimit)
                                      
-    vc = Vision_Controller(lowerLimit, upperLimit, speed, pixel_to_angle)
+    vc = Vision_Controller(lowerLimit, upperLimit, speed)
     rospy.spin()
 
 if __name__ == '__main__':
