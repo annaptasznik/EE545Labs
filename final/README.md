@@ -49,11 +49,11 @@ Since the robot’s start, good waypoint, and bad waypoint positions were known 
 The purpose of path_planner.py is to generate and store a path for later use. To generate paths, we iterated through each given waypoint, published it as a start pose, published the following waypoint as a goal pose, waited with rospy.sleep(), and published the appended the path plan to a full path plan. To store paths, we saved the full path plan array as a .npy file.
 Though we had written a function to automatically calculate poses of each waypoint, we found that it did not result in a straightforward path plan. As a result, we tweaked these poses manually, even adding false waypoints to create plans that involved the fewest loops as possible. The following image shows an example of this: 
 
-![A lot of trial and error was involved in picking poses that resulted in straightforward paths.](https://github.com/annaptasznik/EE545Labs/tree/master/final/project_images/0002.PNG) 
+![A lot of trial and error was involved in picking poses that resulted in straightforward paths.](https://github.com/annaptasznik/EE545Labs/blob/master/final/project_images/0002.PNG) 
 
 Different plans were tested on the course for accuracy. By trying different paths, we were able to learn and correct for certain problem areas. An example of different generated paths can be seen here:
 
-![Different path plans were tested to select the most performant one.](https://github.com/annaptasznik/EE545Labs/tree/master/final/project_images/0003.PNG) 
+![Different path plans were tested to select the most performant one.](https://github.com/annaptasznik/EE545Labs/blob/master/final/project_images/0003.PNG) 
 
 ## Path_Publisher.py
 
@@ -67,12 +67,12 @@ To do this vision controller takes an incoming image from the on-board stereo ca
 The  vision controller subscribes to the /camera/color/image_raw topic and publishes to the /camera/color/image_processed and /vesc/high_level/ackermann_cmd_mux/input/nav_0 topics. The vision controller imports from the launch file the parameters listed in the below table. The final value for these parameters is also listed.
 
 
-![](https://github.com/annaptasznik/EE545Labs/tree/master/final/project_images/0004.PNG) 
+![](https://github.com/annaptasznik/EE545Labs/blob/master/final/project_images/0004.PNG) 
 
 An example of the incoming raw image and the processed image is shown below:
 
 
-![A comparison of the raw image and mask.](https://github.com/annaptasznik/EE545Labs/tree/master/final/project_images/0005.PNG) 
+![A comparison of the raw image and mask.](https://github.com/annaptasznik/EE545Labs/blob/master/final/project_images/0005.PNG) 
 
 ## Functions
 
@@ -87,7 +87,7 @@ The init() function initializes the node. It creates a subscription to the /came
 The main part of the vision controller implements a callback image_process_cb() that receives an image message from the /camera/color/image_raw topic. Immediately on receipt of the message the function color_track() is called, which processes the incoming image and produces an x and y pixel position for the detected object. If no object is detected x and y are set to zero. After the image has been processed the resulting the returned x and y position are tested to see if their position corresponds to a region of interest for the controller, these are shown in the below image.
 
 
-![An illustration showing the design of the image_process_cb function.](https://github.com/annaptasznik/EE545Labs/tree/master/final/project_images/0006.PNG)
+![An illustration showing the design of the image_process_cb function.](https://github.com/annaptasznik/EE545Labs/blob/master/final/project_images/0006.PNG)
 
 We decided that a y position greater than 360 pixels meant that the object was too close to be considered worth steering towards given our simple control scheme. Similarly, if the x position occurs within the center of the image (between 280 and 360 pixels) it is highly likely that the goal will be reached without any intervention from the vision controller.
 If a modification is required to the control this is calculated by the compute_steering() function. This function returns an AckermannDriveStamped message which is published to the
@@ -109,7 +109,7 @@ This function returns an AckermannDriveStamped message that can be published as 
 ## Custom Maps
 Custom maps were used both to aid in path generation and in the actual robot navigation. In the former case, custom maps were made to simulate barriers or known problem areas that were discovered in testing. For example, plans made in maps without trash bins and stairs lead to collisions with these objects in real life. In this case, the provided maps falsely showed empty space where there were in fact obstacles, so they needed to be corrected. Custom maps were also used to correct areas where obstacles were represented when not in fact there. A good example of this is in the small corridor near the main hall, where furniture was represented in what is actually now an empty space. This proved useful beyond simulation to provide more accurate data to the particle filter.  Examples of these changes are shown below:
 
-![An example of modifications made to the existing map.](https://github.com/annaptasznik/EE545Labs/tree/master/final/project_images/0007.PNG)
+![An example of modifications made to the existing map.](https://github.com/annaptasznik/EE545Labs/blob/master/final/project_images/0007.PNG)
 
 # Simulation vs. Robot
 ## Tuning Parameters
@@ -118,7 +118,7 @@ In process of trial and error, we optimized parameters on our physical robot to 
 ### Speed
 In our observation, higher car speeds resulted in lower waypoint hit accuracy. As such, we slowed our car down to increase our chances of hitting all waypoints successfully. 
 
-![A brief test of car accuracy at different speeds suggested that lower speeds might increase our waypoint hits.](https://github.com/annaptasznik/EE545Labs/tree/master/final/project_images/0008.PNG)
+![A brief test of car accuracy at different speeds suggested that lower speeds might increase our waypoint hits.](https://github.com/annaptasznik/EE545Labs/blob/master/final/project_images/0008.PNG)
 
 ### Color
 It was necessary to tune the allowable RGB values in our vision controller mask so that it was matching the hues of the waypoint squares. 
