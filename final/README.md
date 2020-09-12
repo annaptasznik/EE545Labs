@@ -6,8 +6,7 @@ Our system design is based on the "line follower", which uses PID control to ste
 
 # System and Design
 
-
-!A high-level diagram of our system.]("https://github.com/annaptasznik/EE545Labs/tree/master/final/project_images/0001.PNG"#center) 
+![A high-level diagram of our system.](https://github.com/annaptasznik/EE545Labs/blob/master/final/project_images/0001.PNG) 
 
 Our system is desined with two different control schemes: the line follower and the vision controller. The highest priority control is vision controller, which is published to /vesc/high_level_ackermann_cmd_mux/input/nav_0. What this means in practive is that if a blue waypoint is detected by the vision controller, it will issue overriding controls to navigate towards the desired waypoint. When the vision controller is idle (no blue is detected), the line follower takes over. Line follower publishes controls to /vesc/high_level_ackermann_cmd_mux/input/nav_1. These control decisions cause the car to always tend towards a predetermined path unless a waypoint is close enough to navigate towards.
 
@@ -48,10 +47,9 @@ Since the robot’s start, good waypoint, and bad waypoint positions were known 
 ## Path_Planner.py
 
 The purpose of path_planner.py is to generate and store a path for later use. To generate paths, we iterated through each given waypoint, published it as a start pose, published the following waypoint as a goal pose, waited with rospy.sleep(), and published the appended the path plan to a full path plan. To store paths, we saved the full path plan array as a .npy file.
-Though we had written a function to automatically calculate poses of each waypoint, we found that it did not result in a straightforward path plan. As a result, we tweaked these poses manually, even adding false waypoints to create plans that involved the fewest loops as possible. The following image shows an example of this:
+Though we had written a function to automatically calculate poses of each waypoint, we found that it did not result in a straightforward path plan. As a result, we tweaked these poses manually, even adding false waypoints to create plans that involved the fewest loops as possible. The following image shows an example of this: 
 
-
-!A lot of trial and error was involved in picking poses that resulted in straightforward paths.]("https://github.com/annaptasznik/EE545Labs/tree/master/final/project_images/0002.PNG"#center) 
+![A lot of trial and error was involved in picking poses that resulted in straightforward paths.](https://github.com/annaptasznik/EE545Labs/tree/master/final/project_images/0002.PNG) 
 
 Different plans were tested on the course for accuracy. By trying different paths, we were able to learn and correct for certain problem areas. An example of different generated paths can be seen here:
 
